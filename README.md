@@ -200,37 +200,37 @@ GameFlags.Set("elder_quest_complete", true);
 An extended version of the Dialogue Editor for 3D games with enhanced features:
 
 **Planned Features:**
-- [] **3D Camera Control** — Dynamic camera angles during dialogue (focus on speaker)
-- [] **Animation Integration** — Play character animations (talking, gesturing, expressions)
-- [] **Emotion System** — Track NPC emotional state (happy, angry, sad, neutral) with visual feedback
-- [] **Dialogue Pathfinding** — NPCs move to player during conversation
-- [] **Audio Support** — Voice lines with lip-sync synchronization
-- [] **Multiple Languages** — Built-in localization system for dialogue text
-- [] **Quest System Integration** — Automatic quest marker placement based on dialogue triggers
-- [] **Branching Logic** — Advanced conditions (inventory items, relationship levels, time-based)
-- [] **Screen Positioning** — Customizable UI anchoring for dialogues in 3D space
+- [ ] **3D Camera Control** — Dynamic camera angles during dialogue (focus on speaker)
+- [ ] **Animation Integration** — Play character animations (talking, gesturing, expressions)
+- [ ] **Emotion System** — Track NPC emotional state (happy, angry, sad, neutral) with visual feedback
+- [ ] **Dialogue Pathfinding** — NPCs move to player during conversation
+- [ ] **Audio Support** — Voice lines with lip-sync synchronization
+- [ ] **Multiple Languages** — Built-in localization system for dialogue text
+- [ ] **Quest System Integration** — Automatic quest marker placement based on dialogue triggers
+- [ ] **Branching Logic** — Advanced conditions (inventory items, relationship levels, time-based)
+- [ ] **Screen Positioning** — Customizable UI anchoring for dialogues in 3D space
 
 **Architecture:**
-- [] Enhanced `DialogueManager3D` with Animator support
-- [] `NPCAnimator` component for character expression synchronization
-- [] `LocalizationManager` for multi-language support
-- [] Extended JSON schema to support animation events and emotions
-- [] Web editor upgrade to handle 3D-specific fields
+- [ ] Enhanced `DialogueManager3D` with Animator support
+- [ ] `NPCAnimator` component for character expression synchronization
+- [ ] `LocalizationManager` for multi-language support
+- [ ] Extended JSON schema to support animation events and emotions
+- [ ] Web editor upgrade to handle 3D-specific fields
 
 **Timeline:**
-- [] Phase 1: Camera control and animation integration
-- [] Phase 2: Emotion system and visual feedback
-- [] Phase 3: Audio support and localization
-- [] Phase 4: Advanced quest integration and branching logic
+- [ ] Phase 1: Camera control and animation integration
+- [ ] Phase 2: Emotion system and visual feedback
+- [ ] Phase 3: Audio support and localization
+- [ ] Phase 4: Advanced quest integration and branching logic
 
 ---
 
 ## 📦 Related Projects
 
-- [] **Quest System** — Companion system for tracking objectives and gating dialogue
-- [] **Save System** — Persistent GameFlags and dialogue progression
-- [] **Character Relationship** — Track relationship scores affecting dialogue outcomes
-- [] **UI Theme System** — Customizable dialogue UI colors and fonts
+- [ ] **Quest System** — Companion system for tracking objectives and gating dialogue
+- [ ] **Save System** — Persistent GameFlags and dialogue progression
+- [ ] **Character Relationship** — Track relationship scores affecting dialogue outcomes
+- [ ] **UI Theme System** — Customizable dialogue UI colors and fonts
 
 ---
 
