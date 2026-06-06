@@ -1,772 +1,722 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dialogue Editor</title>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Cinzel:wght@400;600&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg:        #0d0f13;
-    --surface:   #13161d;
-    --surface2:  #1a1e28;
-    --surface3:  #222736;
-    --border:    #2a3045;
-    --accent:    #c8a96e;
-    --accent2:   #7eb8c9;
-    --danger:    #c96e6e;
-    --success:   #6ec98a;
-    --warn:      #c9a96e;
-    --text:      #d4cfc4;
-    --muted:     #6b7280;
-    --mono:      'Share Tech Mono', monospace;
-    --serif:     'Cinzel', serif;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 13px; min-height: 100vh; display: flex; flex-direction: column; }
-
-  /* HEADER */
-  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; }
-  header h1 { font-family: var(--serif); font-size: 18px; color: var(--accent); letter-spacing: .12em; flex: 1; }
-  header h1 span { color: var(--muted); font-size: 12px; font-family: var(--mono); margin-left: 10px; letter-spacing: 0; }
-
-  .btn { font-family: var(--mono); font-size: 12px; padding: 7px 16px; border: 1px solid var(--border); border-radius: 3px; cursor: pointer; background: var(--surface2); color: var(--text); transition: all .15s; letter-spacing: .05em; }
-  .btn:hover { border-color: var(--accent); color: var(--accent); }
-  .btn-accent { background: var(--accent); color: #1a1208; border-color: var(--accent); font-weight: bold; }
-  .btn-accent:hover { background: #dbbe88; color: #1a1208; border-color: #dbbe88; }
-  .btn-danger { border-color: var(--danger); color: var(--danger); }
-  .btn-danger:hover { background: var(--danger); color: #1a0808; }
-  .btn-success { border-color: var(--success); color: var(--success); }
-  .btn-success:hover { background: var(--success); color: #081a10; }
-
-  /* LAYOUT */
-  .layout { display: grid; grid-template-columns: 260px 1fr; flex: 1; overflow: hidden; height: calc(100vh - 53px); }
-
-  /* SIDEBAR */
-  .sidebar { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
-  .sidebar-header { padding: 14px 16px 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
-  .sidebar-header span { flex: 1; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .15em; }
-  .tree-list { overflow-y: auto; flex: 1; padding: 8px 0; }
-  .tree-item { padding: 10px 16px; cursor: pointer; border-left: 3px solid transparent; transition: all .12s; display: flex; align-items: center; gap: 8px; user-select: none; }
-  .tree-item:hover { background: var(--surface2); }
-  .tree-item.active { border-left-color: var(--accent); background: var(--surface2); color: var(--accent); }
-  .tree-item .tree-id { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .tree-item .tree-count { font-size: 10px; color: var(--muted); background: var(--surface3); border-radius: 10px; padding: 1px 7px; }
-
-  /* MAIN EDITOR */
-  .editor-main { display: flex; flex-direction: column; overflow: hidden; }
-  .editor-toolbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-
-  /* ID field with display name + formatted preview */
-  .id-field-wrap { display: flex; flex-direction: column; gap: 3px; }
-  .id-display-input { font-family: var(--mono); font-size: 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 3px; color: var(--accent); padding: 5px 10px; width: 260px; letter-spacing: .04em; }
-  .id-display-input:focus { outline: none; border-color: var(--accent); }
-  .id-preview { font-size: 10px; color: var(--muted); padding-left: 2px; letter-spacing: .05em; }
-  .id-preview span { color: var(--accent2); }
-
-  .spacer { flex: 1; }
-  .nodes-area { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
-
-  /* NODE CARD */
-  .node-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; overflow: visible; transition: border-color .15s, box-shadow .15s; position: relative; }
-  .node-card.drag-over { border-color: var(--accent2); box-shadow: 0 0 0 2px rgba(126,184,201,0.25); }
-  .node-card.dragging { opacity: 0.4; border-color: var(--accent); }
-
-  .node-header { background: var(--surface2); padding: 10px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); border-radius: 6px 6px 0 0; }
-  .drag-handle { cursor: grab; color: var(--muted); font-size: 16px; line-height: 1; padding: 0 4px; transition: color .12s; flex-shrink: 0; }
-  .drag-handle:hover { color: var(--accent); }
-  .drag-handle:active { cursor: grabbing; }
-
-  .node-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; background: var(--surface3); color: var(--accent2); border: 1px solid var(--border); letter-spacing: .08em; flex-shrink: 0; }
-  .node-badge.start-badge { background: #1a1a0d; border-color: var(--accent); color: var(--accent); }
-
-  /* Node ID: display name input + formatted preview */
-  .node-id-wrap { display: flex; flex-direction: column; gap: 2px; flex: 1; }
-  .node-id-wrap input { font-size: 13px; background: var(--surface2); border: 1px solid var(--border); border-radius: 3px; color: var(--accent2); padding: 4px 8px; width: 100%; font-family: var(--mono); }
-  .node-id-wrap input:focus { outline: none; border-color: var(--accent2); }
-  .node-id-preview { font-size: 10px; color: var(--muted); padding-left: 2px; }
-  .node-id-preview span { color: var(--accent2); }
-
-  .field-row { display: grid; grid-template-columns: 90px 1fr; align-items: start; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--border); }
-  .field-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; padding-top: 6px; }
-  input[type=text], textarea { font-family: var(--mono); font-size: 13px; background: var(--surface2); border: 1px solid var(--border); border-radius: 3px; color: var(--text); padding: 5px 9px; width: 100%; transition: border-color .12s; resize: vertical; }
-  input[type=text]:focus, textarea:focus { outline: none; border-color: var(--accent2); }
-  textarea { min-height: 60px; }
-
-  /* OPTIONS */
-  .options-section { padding: 10px 14px; border-top: 1px solid var(--border); background: var(--surface2); border-radius: 0 0 6px 6px; }
-  .options-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .12em; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
-  .option-row { display: grid; grid-template-columns: 1fr 1fr 30px; gap: 6px; margin-bottom: 6px; align-items: center; }
-  .option-row input { font-size: 12px; }
-
-  /* Next node input — highlight if target doesn't exist yet */
-  .next-input { position: relative; }
-  .next-input input.missing { border-color: var(--warn) !important; color: var(--warn); }
-  .next-input input.missing:focus { border-color: var(--warn) !important; }
-  .create-node-hint { font-size: 10px; color: var(--warn); margin-top: 2px; cursor: pointer; text-decoration: underline dotted; display: none; }
-  .create-node-hint.visible { display: block; }
-
-  .btn-icon { background: none; border: 1px solid var(--border); border-radius: 3px; color: var(--danger); cursor: pointer; padding: 4px 6px; font-size: 13px; line-height: 1; transition: all .12s; }
-  .btn-icon:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
-  .btn-icon.add { color: var(--success); }
-  .btn-icon.add:hover { background: var(--success); color: #fff; border-color: var(--success); }
-  .no-options-tag { font-size: 11px; color: var(--muted); font-style: italic; }
-
-  /* SIDE EFFECTS */
-  .effects-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 10px 14px; border-top: 1px solid var(--border); }
-  .effect-field label { display: block; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 4px; }
-  .effect-field input { font-size: 11px; }
-
-  /* EMPTY STATE */
-  .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: var(--muted); }
-  .empty-state .big { font-family: var(--serif); font-size: 22px; color: var(--border); }
-
-  /* MODAL */
-  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 200; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .2s; }
-  .modal-overlay.open { opacity: 1; pointer-events: all; }
-  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; width: 720px; max-width: 95vw; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
-  .modal-header { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; font-family: var(--serif); color: var(--accent); font-size: 14px; }
-  .modal pre { overflow: auto; flex: 1; padding: 16px 18px; font-size: 12px; line-height: 1.6; color: var(--text); background: var(--bg); margin: 12px; border-radius: 4px; border: 1px solid var(--border); }
-  .modal-footer { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
-
-  /* DROP ZONE between cards */
-  .drop-zone { height: 6px; border-radius: 3px; margin: -8px 0; transition: all .15s; }
-  .drop-zone.active { height: 28px; background: rgba(126,184,201,0.12); border: 1px dashed var(--accent2); border-radius: 6px; margin: 0; }
-
-  /* TOAST */
-  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface2); border: 1px solid var(--success); color: var(--success); padding: 10px 18px; border-radius: 4px; font-size: 12px; z-index: 300; opacity: 0; transform: translateY(10px); transition: all .2s; }
-  .toast.show { opacity: 1; transform: translateY(0); }
-
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-
-  /* FILE DRAG & DROP OVERLAY */
-  #dropOverlay {
-    position: fixed; inset: 0; z-index: 400;
-    background: rgba(13,15,19,.88);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 16px;
-    opacity: 0; pointer-events: none;
-    transition: opacity .18s;
-  }
-  #dropOverlay.active { opacity: 1; pointer-events: all; }
-  #dropOverlay .drop-box {
-    border: 2px dashed var(--accent2);
-    border-radius: 12px;
-    padding: 48px 80px;
-    display: flex; flex-direction: column; align-items: center; gap: 14px;
-    background: rgba(126,184,201,.06);
-    pointer-events: none;
-  }
-  #dropOverlay .drop-icon { font-size: 52px; line-height: 1; }
-  #dropOverlay .drop-title { font-family: var(--serif); font-size: 22px; color: var(--accent2); letter-spacing: .08em; }
-  #dropOverlay .drop-sub   { font-size: 13px; color: var(--muted); }
-</style>
-</head>
-<body>
-
-<header>
-  <h1>DIALOGUE EDITOR <span>dialogues.json</span></h1>
-  <button class="btn" onclick="importJSON()">↑ Import JSON</button>
-  <button class="btn btn-success" onclick="showPreview()">Preview JSON</button>
-  <button class="btn btn-accent" onclick="exportJSON()">↓ Export JSON</button>
-  <input type="file" id="fileInput" accept=".json" style="display:none" onchange="loadFile(event)">
-</header>
-
-<div class="layout">
-  <div class="sidebar">
-    <div class="sidebar-header">
-      <span>Dialogue Trees</span>
-      <button class="btn" style="padding:4px 10px;font-size:11px" onclick="addTree()">+ New</button>
-    </div>
-    <div class="tree-list" id="treeList"></div>
-  </div>
-  <div class="editor-main" id="editorMain">
-    <div class="empty-state" id="emptyState">
-      <div class="big">No tree selected</div>
-      <div>Import a dialogues.json or create a new tree</div>
-      <button class="btn btn-accent" onclick="addTree()">+ Create Tree</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
-  <div class="modal">
-    <div class="modal-header">
-      <span>JSON Preview</span>
-      <div style="flex:1"></div>
-      <button class="btn" onclick="closePreview()">✕ Close</button>
-    </div>
-    <pre id="jsonPreview"></pre>
-    <div class="modal-footer">
-      <button class="btn btn-success" onclick="copyJSON()">Copy to Clipboard</button>
-      <button class="btn btn-accent" onclick="exportJSON()">↓ Download</button>
-    </div>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<!-- FILE DRAG & DROP OVERLAY -->
-<div id="dropOverlay">
-  <div class="drop-box">
-    <div class="drop-icon">⇣</div>
-    <div class="drop-title">Drop JSON File</div>
-    <div class="drop-sub">Release to load your dialogues.json</div>
-  </div>
-</div>
-
-<script>
-// ── STATE ─────────────────────────────────────────────────────────────────────
-let db = { dialogues: [] };
-let activeTreeIdx = -1;
-
-// Drag state
-let dragSrcIdx = null;
-
-// ── SLUG HELPER ───────────────────────────────────────────────────────────────
-// "Village Girl Intro" → "village_girl_intro"
-function toSlug(display) {
-  return display
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '')   // strip non-alphanum (keep spaces)
-    .replace(/\s+/g, '_')           // spaces → underscores
-    .replace(/_+/g, '_')            // collapse multiple underscores
-    .replace(/^_|_$/g, '');         // trim leading/trailing underscores
-}
-
-// reverse: "village_girl_intro" → "Village Girl Intro"
-function fromSlug(slug) {
-  return (slug || '').split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-}
-
-// ── INIT ──────────────────────────────────────────────────────────────────────
-// ── INIT ──────────────────────────────────────────────────────────────────────
-renderSidebar();
-
-// ── SIDEBAR ───────────────────────────────────────────────────────────────────
-let sidebarDragSrc = null;
-
-function renderSidebar() {
-  const list = document.getElementById('treeList');
-  list.innerHTML = '';
-  db.dialogues.forEach((tree, i) => {
-    const div = document.createElement('div');
-    div.className = 'tree-item' + (i === activeTreeIdx ? ' active' : '');
-    div.draggable = true;
-    const display = fromSlug(tree.id);
-    div.innerHTML = `
-      <span style="cursor:grab;color:var(--muted);font-size:14px;padding-right:4px;flex-shrink:0" title="Drag to reorder">⠿</span>
-      <span class="tree-id" title="${esc(tree.id)}">${esc(display)}</span>
-      <span class="tree-count">${(tree.nodes || []).length}</span>
-    `;
-    div.onclick = () => selectTree(i);
-
-    // Sidebar drag events
-    div.addEventListener('dragstart', e => {
-      sidebarDragSrc = i;
-      e.dataTransfer.effectAllowed = 'move';
-      setTimeout(() => div.style.opacity = '0.4', 0);
-    });
-    div.addEventListener('dragend', () => {
-      div.style.opacity = '';
-      sidebarDragSrc = null;
-      document.querySelectorAll('.tree-item').forEach(el => el.style.borderTop = '');
-    });
-    div.addEventListener('dragover', e => {
-      e.preventDefault();
-      if (sidebarDragSrc === null || sidebarDragSrc === i) return;
-      document.querySelectorAll('.tree-item').forEach(el => el.style.borderTop = '');
-      div.style.borderTop = '2px solid var(--accent2)';
-    });
-    div.addEventListener('dragleave', () => {
-      div.style.borderTop = '';
-    });
-    div.addEventListener('drop', e => {
-      e.preventDefault();
-      div.style.borderTop = '';
-      if (sidebarDragSrc === null || sidebarDragSrc === i) return;
-      const from = sidebarDragSrc;
-      const to   = i;
-      const [moved] = db.dialogues.splice(from, 1);
-      db.dialogues.splice(to, 0, moved);
-      // Keep active selection on the same tree
-      if (activeTreeIdx === from) activeTreeIdx = to;
-      else if (activeTreeIdx > from && activeTreeIdx <= to) activeTreeIdx--;
-      else if (activeTreeIdx < from && activeTreeIdx >= to) activeTreeIdx++;
-      sidebarDragSrc = null;
-      renderSidebar();
-    });
-
-    list.appendChild(div);
-  });
-}
-
-function selectTree(idx) {
-  activeTreeIdx = idx;
-  renderSidebar();
-  renderEditor();
-}
-
-// ── EDITOR ────────────────────────────────────────────────────────────────────
-function renderEditor() {
-  const main = document.getElementById('editorMain');
-  const tree = db.dialogues[activeTreeIdx];
-  if (!tree) {
-    main.innerHTML = '';
-    main.appendChild(buildEmptyState());
-    return;
-  }
-
-  const displayName = fromSlug(tree.id);
-  const slug = toSlug(displayName);
-
-  main.innerHTML = `
-    <div class="editor-toolbar">
-      <label style="font-size:11px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase">Tree</label>
-      <div class="id-field-wrap">
-        <input class="id-display-input" type="text" id="treeDisplayInput"
-          placeholder="Village Girl Intro" value="${esc(displayName)}"
-          oninput="onTreeDisplayInput(this.value)">
-        <div class="id-preview" id="treeIdPreview">id: <span>${esc(slug)}</span></div>
+   <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Dialogue Editor</title>
+      <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Cinzel:wght@400;600&display=swap" rel="stylesheet">
+      <style>
+         :root {
+         --bg:        #0d0f13;
+         --surface:   #13161d;
+         --surface2:  #1a1e28;
+         --surface3:  #222736;
+         --border:    #2a3045;
+         --accent:    #c8a96e;
+         --accent2:   #7eb8c9;
+         --danger:    #c96e6e;
+         --success:   #6ec98a;
+         --warn:      #c9a96e;
+         --text:      #d4cfc4;
+         --muted:     #6b7280;
+         --mono:      'Share Tech Mono', monospace;
+         --serif:     'Cinzel', serif;
+         }
+         * { box-sizing: border-box; margin: 0; padding: 0; }
+         body { background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 13px; min-height: 100vh; display: flex; flex-direction: column; }
+         /* HEADER */
+         header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; }
+         header h1 { font-family: var(--serif); font-size: 18px; color: var(--accent); letter-spacing: .12em; flex: 1; }
+         header h1 span { color: var(--muted); font-size: 12px; font-family: var(--mono); margin-left: 10px; letter-spacing: 0; }
+         .btn { font-family: var(--mono); font-size: 12px; padding: 7px 16px; border: 1px solid var(--border); border-radius: 3px; cursor: pointer; background: var(--surface2); color: var(--text); transition: all .15s; letter-spacing: .05em; }
+         .btn:hover { border-color: var(--accent); color: var(--accent); }
+         .btn-accent { background: var(--accent); color: #1a1208; border-color: var(--accent); font-weight: bold; }
+         .btn-accent:hover { background: #dbbe88; color: #1a1208; border-color: #dbbe88; }
+         .btn-danger { border-color: var(--danger); color: var(--danger); }
+         .btn-danger:hover { background: var(--danger); color: #1a0808; }
+         .btn-success { border-color: var(--success); color: var(--success); }
+         .btn-success:hover { background: var(--success); color: #081a10; }
+         /* LAYOUT */
+         .layout { display: grid; grid-template-columns: 260px 1fr; flex: 1; overflow: hidden; height: calc(100vh - 53px); }
+         /* SIDEBAR */
+         .sidebar { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+         .sidebar-header { padding: 14px 16px 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+         .sidebar-header span { flex: 1; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .15em; }
+         .tree-list { overflow-y: auto; flex: 1; padding: 8px 0; }
+         .tree-item { padding: 10px 16px; cursor: pointer; border-left: 3px solid transparent; transition: all .12s; display: flex; align-items: center; gap: 8px; user-select: none; }
+         .tree-item:hover { background: var(--surface2); }
+         .tree-item.active { border-left-color: var(--accent); background: var(--surface2); color: var(--accent); }
+         .tree-item .tree-id { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+         .tree-item .tree-count { font-size: 10px; color: var(--muted); background: var(--surface3); border-radius: 10px; padding: 1px 7px; }
+         /* MAIN EDITOR */
+         .editor-main { display: flex; flex-direction: column; overflow: hidden; }
+         .editor-toolbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+         /* ID field with display name + formatted preview */
+         .id-field-wrap { display: flex; flex-direction: column; gap: 3px; }
+         .id-display-input { font-family: var(--mono); font-size: 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 3px; color: var(--accent); padding: 5px 10px; width: 260px; letter-spacing: .04em; }
+         .id-display-input:focus { outline: none; border-color: var(--accent); }
+         .id-preview { font-size: 10px; color: var(--muted); padding-left: 2px; letter-spacing: .05em; }
+         .id-preview span { color: var(--accent2); }
+         .spacer { flex: 1; }
+         .nodes-area { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+         /* NODE CARD */
+         .node-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; overflow: visible; transition: border-color .15s, box-shadow .15s; position: relative; }
+         .node-card.drag-over { border-color: var(--accent2); box-shadow: 0 0 0 2px rgba(126,184,201,0.25); }
+         .node-card.dragging { opacity: 0.4; border-color: var(--accent); }
+         .node-header { background: var(--surface2); padding: 10px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); border-radius: 6px 6px 0 0; }
+         .drag-handle { cursor: grab; color: var(--muted); font-size: 16px; line-height: 1; padding: 0 4px; transition: color .12s; flex-shrink: 0; }
+         .drag-handle:hover { color: var(--accent); }
+         .drag-handle:active { cursor: grabbing; }
+         .node-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; background: var(--surface3); color: var(--accent2); border: 1px solid var(--border); letter-spacing: .08em; flex-shrink: 0; }
+         .node-badge.start-badge { background: #1a1a0d; border-color: var(--accent); color: var(--accent); }
+         /* Node ID: display name input + formatted preview */
+         .node-id-wrap { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+         .node-id-wrap input { font-size: 13px; background: var(--surface2); border: 1px solid var(--border); border-radius: 3px; color: var(--accent2); padding: 4px 8px; width: 100%; font-family: var(--mono); }
+         .node-id-wrap input:focus { outline: none; border-color: var(--accent2); }
+         .node-id-preview { font-size: 10px; color: var(--muted); padding-left: 2px; }
+         .node-id-preview span { color: var(--accent2); }
+         .field-row { display: grid; grid-template-columns: 90px 1fr; align-items: start; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+         .field-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; padding-top: 6px; }
+         input[type=text], textarea { font-family: var(--mono); font-size: 13px; background: var(--surface2); border: 1px solid var(--border); border-radius: 3px; color: var(--text); padding: 5px 9px; width: 100%; transition: border-color .12s; resize: vertical; }
+         input[type=text]:focus, textarea:focus { outline: none; border-color: var(--accent2); }
+         textarea { min-height: 60px; }
+         /* OPTIONS */
+         .options-section { padding: 10px 14px; border-top: 1px solid var(--border); background: var(--surface2); border-radius: 0 0 6px 6px; }
+         .options-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .12em; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+         .option-row { display: grid; grid-template-columns: 1fr 1fr 30px; gap: 6px; margin-bottom: 6px; align-items: center; }
+         .option-row input { font-size: 12px; }
+         /* Next node input — highlight if target doesn't exist yet */
+         .next-input { position: relative; }
+         .next-input input.missing { border-color: var(--warn) !important; color: var(--warn); }
+         .next-input input.missing:focus { border-color: var(--warn) !important; }
+         .create-node-hint { font-size: 10px; color: var(--warn); margin-top: 2px; cursor: pointer; text-decoration: underline dotted; display: none; }
+         .create-node-hint.visible { display: block; }
+         .btn-icon { background: none; border: 1px solid var(--border); border-radius: 3px; color: var(--danger); cursor: pointer; padding: 4px 6px; font-size: 13px; line-height: 1; transition: all .12s; }
+         .btn-icon:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+         .btn-icon.add { color: var(--success); }
+         .btn-icon.add:hover { background: var(--success); color: #fff; border-color: var(--success); }
+         .no-options-tag { font-size: 11px; color: var(--muted); font-style: italic; }
+         /* SIDE EFFECTS */
+         .effects-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 10px 14px; border-top: 1px solid var(--border); }
+         .effect-field label { display: block; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 4px; }
+         .effect-field input { font-size: 11px; }
+         /* EMPTY STATE */
+         .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: var(--muted); }
+         .empty-state .big { font-family: var(--serif); font-size: 22px; color: var(--border); }
+         /* MODAL */
+         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 200; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .2s; }
+         .modal-overlay.open { opacity: 1; pointer-events: all; }
+         .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; width: 720px; max-width: 95vw; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+         .modal-header { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; font-family: var(--serif); color: var(--accent); font-size: 14px; }
+         .modal pre { overflow: auto; flex: 1; padding: 16px 18px; font-size: 12px; line-height: 1.6; color: var(--text); background: var(--bg); margin: 12px; border-radius: 4px; border: 1px solid var(--border); }
+         .modal-footer { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+         /* DROP ZONE between cards */
+         .drop-zone { height: 6px; border-radius: 3px; margin: -8px 0; transition: all .15s; }
+         .drop-zone.active { height: 28px; background: rgba(126,184,201,0.12); border: 1px dashed var(--accent2); border-radius: 6px; margin: 0; }
+         /* TOAST */
+         .toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface2); border: 1px solid var(--success); color: var(--success); padding: 10px 18px; border-radius: 4px; font-size: 12px; z-index: 300; opacity: 0; transform: translateY(10px); transition: all .2s; }
+         .toast.show { opacity: 1; transform: translateY(0); }
+         ::-webkit-scrollbar { width: 6px; height: 6px; }
+         ::-webkit-scrollbar-track { background: var(--bg); }
+         ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+         /* FILE DRAG & DROP OVERLAY */
+         #dropOverlay {
+         position: fixed; inset: 0; z-index: 400;
+         background: rgba(13,15,19,.88);
+         display: flex; flex-direction: column; align-items: center; justify-content: center;
+         gap: 16px;
+         opacity: 0; pointer-events: none;
+         transition: opacity .18s;
+         }
+         #dropOverlay.active { opacity: 1; pointer-events: all; }
+         #dropOverlay .drop-box {
+         border: 2px dashed var(--accent2);
+         border-radius: 12px;
+         padding: 48px 80px;
+         display: flex; flex-direction: column; align-items: center; gap: 14px;
+         background: rgba(126,184,201,.06);
+         pointer-events: none;
+         }
+         #dropOverlay .drop-icon { font-size: 52px; line-height: 1; }
+         #dropOverlay .drop-title { font-family: var(--serif); font-size: 22px; color: var(--accent2); letter-spacing: .08em; }
+         #dropOverlay .drop-sub   { font-size: 13px; color: var(--muted); }
+      </style>
+   </head>
+   <body>
+      <header>
+         <h1>DIALOGUE EDITOR <span>dialogues.json</span></h1>
+         <button class="btn" onclick="importJSON()">↑ Import JSON</button>
+         <button class="btn btn-success" onclick="showPreview()">Preview JSON</button>
+         <button class="btn btn-accent" onclick="exportJSON()">↓ Export JSON</button>
+         <input type="file" id="fileInput" accept=".json" style="display:none" onchange="loadFile(event)">
+      </header>
+      <div class="layout">
+         <div class="sidebar">
+            <div class="sidebar-header">
+               <span>Dialogue Trees</span>
+               <button class="btn" style="padding:4px 10px;font-size:11px" onclick="addTree()">+ New</button>
+            </div>
+            <div class="tree-list" id="treeList"></div>
+         </div>
+         <div class="editor-main" id="editorMain">
+            <div class="empty-state" id="emptyState">
+               <div class="big">No tree selected</div>
+               <div>Import a dialogues.json or create a new tree</div>
+               <button class="btn btn-accent" onclick="addTree()">+ Create Tree</button>
+            </div>
+         </div>
       </div>
-      <div class="spacer"></div>
-      <button class="btn" onclick="addNode()">+ Add Node</button>
-      <button class="btn btn-danger" onclick="deleteTree()">Delete Tree</button>
-    </div>
-    <div class="nodes-area" id="nodesArea"></div>
-  `;
-  renderNodes();
-}
-
-function onTreeDisplayInput(val) {
-  const slug = toSlug(val);
-  db.dialogues[activeTreeIdx].id = slug;
-  const preview = document.getElementById('treeIdPreview');
-  if (preview) preview.innerHTML = 'id: <span>' + esc(slug) + '</span>';
-  renderSidebar();
-}
-
-// ── NODES ─────────────────────────────────────────────────────────────────────
-function renderNodes() {
-  const area = document.getElementById('nodesArea');
-  if (!area) return;
-  const tree = db.dialogues[activeTreeIdx];
-  area.innerHTML = '';
-
-  (tree.nodes || []).forEach((node, ni) => {
-    // drop zone before each card
-    area.appendChild(makeDropZone(ni));
-    area.appendChild(buildNodeCard(node, ni));
-  });
-  // final drop zone after last card
-  area.appendChild(makeDropZone((tree.nodes || []).length));
-}
-
-function getExistingNodeIds() {
-  const tree = db.dialogues[activeTreeIdx];
-  return new Set((tree.nodes || []).map(n => n.nodeId));
-}
-
-function buildNodeCard(node, ni) {
-  const isStart = node.nodeId === 'start';
-  const card = document.createElement('div');
-  card.className = 'node-card';
-  card.id = `node-card-${ni}`;
-  card.draggable = true;
-
-  // Drag events
-  card.addEventListener('dragstart', e => onDragStart(e, ni));
-  card.addEventListener('dragend',   e => onDragEnd(e));
-
-  const displayNodeId = fromSlug(node.nodeId);
-  const slugNodeId    = toSlug(displayNodeId);
-  const existingIds   = getExistingNodeIds();
-
-  // Build options HTML
-  const opts = node.options || [];
-  const optRowsHtml = opts.map((o, oi) => {
-    const nextSlug = o.next || '';
-    const missing  = nextSlug && !existingIds.has(nextSlug);
-    return `
-      <div class="option-row">
-        <input type="text" placeholder="Button label" value="${esc(o.label)}"
-          oninput="setOption(${ni},${oi},'label',this.value)">
-        <div class="next-input">
-          <input type="text" placeholder="→ next nodeId" value="${esc(nextSlug)}"
-            class="${missing ? 'missing' : ''}"
-            oninput="onNextInput(this,${ni},${oi})">
-          <div class="create-node-hint ${missing ? 'visible' : ''}"
-            onclick="createNodeFromNext(${ni},${oi},'${esc(nextSlug)}')">
-            ✦ Node "${esc(nextSlug)}" doesn't exist — click to create it
-          </div>
-        </div>
-        <button class="btn-icon" title="Remove option" onclick="removeOption(${ni},${oi})">✕</button>
+      <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+         <div class="modal">
+            <div class="modal-header">
+               <span>JSON Preview</span>
+               <div style="flex:1"></div>
+               <button class="btn" onclick="closePreview()">✕ Close</button>
+            </div>
+            <pre id="jsonPreview"></pre>
+            <div class="modal-footer">
+               <button class="btn btn-success" onclick="copyJSON()">Copy to Clipboard</button>
+               <button class="btn btn-accent" onclick="exportJSON()">↓ Download</button>
+            </div>
+         </div>
       </div>
-    `;
-  }).join('');
-
-  card.innerHTML = `
-    <div class="node-header">
-      <span class="drag-handle" title="Drag to reorder">⠿</span>
-      <span class="node-badge ${isStart ? 'start-badge' : ''}">${isStart ? '★ START' : 'NODE'}</span>
-      <div class="node-id-wrap">
-        <input type="text" id="nodeDisplay-${ni}"
-          placeholder="My Node Name" value="${esc(displayNodeId)}"
-          oninput="onNodeIdInput(this,${ni})">
-        <div class="node-id-preview" id="nodeIdPreview-${ni}">nodeId: <span>${esc(slugNodeId)}</span></div>
+      <div class="toast" id="toast"></div>
+      <!-- FILE DRAG & DROP OVERLAY -->
+      <div id="dropOverlay">
+         <div class="drop-box">
+            <div class="drop-icon">⇣</div>
+            <div class="drop-title">Drop JSON File</div>
+            <div class="drop-sub">Release to load your dialogues.json</div>
+         </div>
       </div>
-      <button class="btn btn-danger" style="padding:4px 10px;font-size:11px;flex-shrink:0" onclick="deleteNode(${ni})">Delete</button>
-    </div>
-
-    <div class="field-row">
-      <span class="field-label">Speaker</span>
-      <input type="text" placeholder="NPC name" value="${esc(node.speaker)}"
-        oninput="setNodeField(${ni},'speaker',this.value)">
-    </div>
-
-    <div class="field-row">
-      <span class="field-label">Text</span>
-      <textarea placeholder="Dialogue text..." oninput="setNodeField(${ni},'text',this.value)">${esc(node.text)}</textarea>
-    </div>
-
-    <div class="effects-row">
-      <div class="effect-field">
-        <label>Give Item</label>
-        <input type="text" placeholder="itemId or blank" value="${esc(node.giveItem)}"
-          oninput="setNodeField(${ni},'giveItem',this.value)">
-      </div>
-      <div class="effect-field">
-        <label>Set Flag</label>
-        <input type="text" placeholder="flagId or blank" value="${esc(node.setFlag)}"
-          oninput="setNodeField(${ni},'setFlag',this.value)">
-      </div>
-      <div class="effect-field">
-        <label>Open Shop</label>
-        <input type="text" placeholder="shopId or blank" value="${esc(node.openShop)}"
-          oninput="setNodeField(${ni},'openShop',this.value)">
-      </div>
-    </div>
-
-    <div class="options-section">
-      <div class="options-label">
-        Player Options
-        <span style="color:var(--muted);font-size:10px">(null = ends conversation)</span>
-        <div style="flex:1"></div>
-        <button class="btn-icon add" title="Add option" onclick="addOption(${ni})">+</button>
-        <button class="btn-icon" style="color:var(--muted);margin-left:4px" title="Toggle null"
-          onclick="toggleNullOptions(${ni})">${node.options === null ? 'Set options' : 'Set null'}</button>
-      </div>
-      ${node.options === null
-        ? '<div class="no-options-tag">options: null — conversation ends here</div>'
-        : (optRowsHtml || '<div class="no-options-tag">No options yet — click + to add</div>')
-      }
-    </div>
-  `;
-  return card;
-}
-
-// ── NODE ID INPUT ─────────────────────────────────────────────────────────────
-function onNodeIdInput(input, ni) {
-  const slug = toSlug(input.value);
-  db.dialogues[activeTreeIdx].nodes[ni].nodeId = slug;
-  const preview = document.getElementById('nodeIdPreview-' + ni);
-  if (preview) preview.innerHTML = 'nodeId: <span>' + esc(slug) + '</span>';
-  // refresh option hints without full re-render (just update missing classes)
-  refreshOptionHints();
-}
-
-function refreshOptionHints() {
-  // Lightweight: only update .missing classes on existing "next" inputs
-  // so typing in a node ID field doesn't destroy focus by rebuilding the DOM.
-  const existingIds = getExistingNodeIds();
-  document.querySelectorAll('.next-input input').forEach(input => {
-    const raw = input.value;
-    const missing = !!(raw && !existingIds.has(raw));
-    input.classList.toggle('missing', missing);
-    const hint = input.parentElement.querySelector('.create-node-hint');
-    if (hint) {
-      hint.classList.toggle('visible', missing);
-      if (missing) hint.textContent = `\u2726 Node "${raw}" doesn't exist \u2014 click to create it`;
-    }
-  });
-}
-
-// ── OPTION "NEXT" INPUT ───────────────────────────────────────────────────────
-function onNextInput(input, ni, oi) {
-  // Store the raw typed value as slug
-  const raw  = input.value;
-  const slug = toSlug(raw) || raw; // if user typed a slug directly, preserve it
-  // Actually store exactly what they typed (they may be mid-typing)
-  db.dialogues[activeTreeIdx].nodes[ni].options[oi].next = raw;
-
-  const existingIds = getExistingNodeIds();
-  const missing = raw && !existingIds.has(raw);
-  input.classList.toggle('missing', missing);
-  const hint = input.parentElement.querySelector('.create-node-hint');
-  if (hint) {
-    hint.classList.toggle('visible', missing);
-    hint.textContent = missing ? `✦ Node "${raw}" doesn't exist — click to create it` : '';
-    hint.onclick = missing ? () => createNodeFromNext(ni, oi, raw) : null;
-  }
-}
-
-function createNodeFromNext(ni, oi, nextId) {
-  const tree = db.dialogues[activeTreeIdx];
-  // Don't create duplicates
-  if (tree.nodes.find(n => n.nodeId === nextId)) {
-    showToast('Node already exists');
-    return;
-  }
-  tree.nodes.push({
-    nodeId:  nextId,
-    speaker: tree.nodes[ni]?.speaker || '',
-    text:    '',
-    options: []
-  });
-  renderNodes();
-  // Scroll new card into view
-  setTimeout(() => {
-    const area = document.getElementById('nodesArea');
-    if (area) area.scrollTop = area.scrollHeight;
-  }, 50);
-  showToast('Created node "' + nextId + '"');
-}
-
-// ── DRAG AND DROP ─────────────────────────────────────────────────────────────
-function makeDropZone(insertBeforeIdx) {
-  const dz = document.createElement('div');
-  dz.className = 'drop-zone';
-  dz.dataset.insertBefore = insertBeforeIdx;
-
-  dz.addEventListener('dragover', e => {
-    e.preventDefault();
-    dz.classList.add('active');
-  });
-  dz.addEventListener('dragleave', () => dz.classList.remove('active'));
-  dz.addEventListener('drop', e => {
-    e.preventDefault();
-    dz.classList.remove('active');
-    const targetIdx = parseInt(dz.dataset.insertBefore);
-    if (dragSrcIdx === null || dragSrcIdx === targetIdx) return;
-    reorderNode(dragSrcIdx, targetIdx);
-  });
-  return dz;
-}
-
-function onDragStart(e, ni) {
-  dragSrcIdx = ni;
-  // slight delay so the card doesn't immediately look dragging
-  setTimeout(() => {
-    const card = document.getElementById('node-card-' + ni);
-    if (card) card.classList.add('dragging');
-  }, 0);
-  e.dataTransfer.effectAllowed = 'move';
-  e.dataTransfer.setData('text/plain', ni);
-}
-
-function onDragEnd(e) {
-  document.querySelectorAll('.node-card').forEach(c => c.classList.remove('dragging'));
-  dragSrcIdx = null;
-}
-
-function reorderNode(fromIdx, insertBeforeIdx) {
-  const nodes = db.dialogues[activeTreeIdx].nodes;
-  const [moved] = nodes.splice(fromIdx, 1);
-  // adjust insertBeforeIdx after splice
-  const adjustedTarget = insertBeforeIdx > fromIdx ? insertBeforeIdx - 1 : insertBeforeIdx;
-  nodes.splice(adjustedTarget, 0, moved);
-  renderNodes();
-}
-
-// ── MUTATIONS ─────────────────────────────────────────────────────────────────
-function setNodeField(ni, field, val) {
-  db.dialogues[activeTreeIdx].nodes[ni][field] = val;
-}
-
-function setOption(ni, oi, field, val) {
-  db.dialogues[activeTreeIdx].nodes[ni].options[oi][field] = val;
-}
-
-function addOption(ni) {
-  const node = db.dialogues[activeTreeIdx].nodes[ni];
-  if (!Array.isArray(node.options)) node.options = [];
-  if (node.options.length >= 4) { showToast('Max 4 options per node'); return; }
-  node.options.push({ label: '', next: '' });
-  renderNodes();
-}
-
-function removeOption(ni, oi) {
-  db.dialogues[activeTreeIdx].nodes[ni].options.splice(oi, 1);
-  renderNodes();
-}
-
-function toggleNullOptions(ni) {
-  const node = db.dialogues[activeTreeIdx].nodes[ni];
-  node.options = node.options === null ? [] : null;
-  renderNodes();
-}
-
-function addNode() {
-  const tree = db.dialogues[activeTreeIdx];
-  tree.nodes.push({ nodeId: 'new_node', speaker: '', text: '', options: [] });
-  renderNodes();
-  setTimeout(() => {
-    const area = document.getElementById('nodesArea');
-    if (area) area.scrollTop = area.scrollHeight;
-  }, 50);
-}
-
-function deleteNode(ni) {
-  if (!confirm('Delete this node?')) return;
-  db.dialogues[activeTreeIdx].nodes.splice(ni, 1);
-  renderNodes();
-}
-
-function addTree() {
-  db.dialogues.push({ id: 'new_dialogue', nodes: [{ nodeId: 'start', speaker: '', text: '', options: [] }] });
-  selectTree(db.dialogues.length - 1);
-}
-
-function deleteTree() {
-  if (!confirm('Delete this entire dialogue tree?')) return;
-  db.dialogues.splice(activeTreeIdx, 1);
-  activeTreeIdx = -1;
-  renderSidebar();
-  const main = document.getElementById('editorMain');
-  main.innerHTML = '';
-  main.appendChild(buildEmptyState());
-}
-
-function buildEmptyState() {
-  const d = document.createElement('div');
-  d.className = 'empty-state';
-  d.id = 'emptyState';
-  d.innerHTML = `
-    <div class="big">No tree selected</div>
-    <div>Import a dialogues.json or create a new tree</div>
-    <button class="btn btn-accent" onclick="addTree()">+ Create Tree</button>
-  `;
-  return d;
-}
-
-// ── IMPORT / EXPORT ───────────────────────────────────────────────────────────
-function importJSON() { document.getElementById('fileInput').click(); }
-
-function loadFile(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    try {
-      db = JSON.parse(ev.target.result);
-      if (!db.dialogues) db.dialogues = [];
-      activeTreeIdx = -1;
-      renderSidebar();
-      const main = document.getElementById('editorMain');
-      main.innerHTML = '';
-      main.appendChild(buildEmptyState());
-      showToast('Imported ' + db.dialogues.length + ' tree(s)');
-    } catch(err) { alert('Invalid JSON: ' + err.message); }
-  };
-  reader.readAsText(file);
-  e.target.value = '';
-}
-
-function buildJSON() {
-  const clean = JSON.parse(JSON.stringify(db));
-  clean.dialogues.forEach(tree => {
-    (tree.nodes || []).forEach(node => {
-      ['giveItem','setFlag','openShop'].forEach(f => { if (!node[f]) delete node[f]; });
-      if (Array.isArray(node.options) && node.options.length === 0) node.options = null;
-    });
-  });
-  return JSON.stringify(clean, null, 2);
-}
-
-function exportJSON() {
-  const blob = new Blob([buildJSON()], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'dialogues.json';
-  a.click();
-  showToast('Downloaded dialogues.json');
-}
-
-function showPreview() {
-  document.getElementById('jsonPreview').textContent = buildJSON();
-  document.getElementById('modalOverlay').classList.add('open');
-}
-function closePreview() { document.getElementById('modalOverlay').classList.remove('open'); }
-function closeModal(e) { if (e.target === document.getElementById('modalOverlay')) closePreview(); }
-function copyJSON() { navigator.clipboard.writeText(buildJSON()).then(() => showToast('Copied to clipboard')); }
-
-// ── FILE DRAG & DROP ──────────────────────────────────────────────────────────
-(function () {
-  let dragCounter = 0;
-  const overlay = document.getElementById('dropOverlay');
-
-  document.addEventListener('dragenter', e => {
-    // Only react to file drags
-    if (!e.dataTransfer.types.includes('Files')) return;
-    dragCounter++;
-    overlay.classList.add('active');
-  });
-
-  document.addEventListener('dragleave', e => {
-    if (!e.dataTransfer.types.includes('Files')) return;
-    dragCounter--;
-    if (dragCounter <= 0) { dragCounter = 0; overlay.classList.remove('active'); }
-  });
-
-  document.addEventListener('dragover', e => {
-    if (e.dataTransfer.types.includes('Files')) e.preventDefault();
-  });
-
-  document.addEventListener('drop', e => {
-    e.preventDefault();
-    dragCounter = 0;
-    overlay.classList.remove('active');
-
-    const file = e.dataTransfer.files[0];
-    if (!file) return;
-    if (!file.name.endsWith('.json')) {
-      showToast('Only .json files are supported', 'warn');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = ev => {
-      try {
-        db = JSON.parse(ev.target.result);
-        if (!db.dialogues) db.dialogues = [];
-        activeTreeIdx = -1;
-        renderSidebar();
-        const main = document.getElementById('editorMain');
-        main.innerHTML = '';
-        main.appendChild(buildEmptyState());
-        showToast('Imported ' + db.dialogues.length + ' tree(s) from ' + file.name);
-      } catch (err) { showToast('Invalid JSON: ' + err.message, 'warn'); }
-    };
-    reader.readAsText(file);
-  });
-})();
-
-
-function esc(s) {
-  if (!s) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-function showToast(msg, type) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.style.borderColor = type === 'warn' ? 'var(--warn)' : 'var(--success)';
-  t.style.color = type === 'warn' ? 'var(--warn)' : 'var(--success)';
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2600);
-}
-</script>
-</body>
+      <script>
+         // STATE
+         let db = { dialogues: [] };
+         let activeTreeIdx = -1;
+         let dragSrcIdx = null;
+         
+         // SLUG HELPER
+         function toSlug(display) {
+           return display
+             .trim()
+             .toLowerCase()
+             .replace(/[^a-z0-9\s]/g, '')   // strip non-alphanum (keep spaces)
+             .replace(/\s+/g, '_')           // spaces → underscores
+             .replace(/_+/g, '_')            // collapse multiple underscores
+             .replace(/^_|_$/g, '');         // trim leading/trailing underscores
+         }
+         
+         // reverse: "village_girl_intro" → "Village Girl Intro"
+         function fromSlug(slug) {
+           return (slug || '').split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+         }
+         
+         // INIT
+         renderSidebar();
+         
+         // SIDEBAR
+         let sidebarDragSrc = null;
+         
+         function renderSidebar() {
+           const list = document.getElementById('treeList');
+           list.innerHTML = '';
+           db.dialogues.forEach((tree, i) => {
+             const div = document.createElement('div');
+             div.className = 'tree-item' + (i === activeTreeIdx ? ' active' : '');
+             div.draggable = true;
+             const display = fromSlug(tree.id);
+             div.innerHTML = `
+               <span style="cursor:grab;color:var(--muted);font-size:14px;padding-right:4px;flex-shrink:0" title="Drag to reorder">⠿</span>
+               <span class="tree-id" title="${esc(tree.id)}">${esc(display)}</span>
+               <span class="tree-count">${(tree.nodes || []).length}</span>
+             `;
+             div.onclick = () => selectTree(i);
+         
+             div.addEventListener('dragstart', e => {
+               sidebarDragSrc = i;
+               e.dataTransfer.effectAllowed = 'move';
+               setTimeout(() => div.style.opacity = '0.4', 0);
+             });
+             div.addEventListener('dragend', () => {
+               div.style.opacity = '';
+               sidebarDragSrc = null;
+               document.querySelectorAll('.tree-item').forEach(el => el.style.borderTop = '');
+             });
+             div.addEventListener('dragover', e => {
+               e.preventDefault();
+               if (sidebarDragSrc === null || sidebarDragSrc === i) return;
+               document.querySelectorAll('.tree-item').forEach(el => el.style.borderTop = '');
+               div.style.borderTop = '2px solid var(--accent2)';
+             });
+             div.addEventListener('dragleave', () => {
+               div.style.borderTop = '';
+             });
+             div.addEventListener('drop', e => {
+               e.preventDefault();
+               div.style.borderTop = '';
+               if (sidebarDragSrc === null || sidebarDragSrc === i) return;
+               const from = sidebarDragSrc;
+               const to   = i;
+               const [moved] = db.dialogues.splice(from, 1);
+               db.dialogues.splice(to, 0, moved);
+               if (activeTreeIdx === from) activeTreeIdx = to;
+               else if (activeTreeIdx > from && activeTreeIdx <= to) activeTreeIdx--;
+               else if (activeTreeIdx < from && activeTreeIdx >= to) activeTreeIdx++;
+               sidebarDragSrc = null;
+               renderSidebar();
+             });
+         
+             list.appendChild(div);
+           });
+         }
+         
+         function selectTree(idx) {
+           activeTreeIdx = idx;
+           renderSidebar();
+           renderEditor();
+         }
+         
+         // EDITOR
+         function renderEditor() {
+           const main = document.getElementById('editorMain');
+           const tree = db.dialogues[activeTreeIdx];
+           if (!tree) {
+             main.innerHTML = '';
+             main.appendChild(buildEmptyState());
+             return;
+           }
+         
+           const displayName = fromSlug(tree.id);
+           const slug = toSlug(displayName);
+         
+           main.innerHTML = `
+             <div class="editor-toolbar">
+               <label style="font-size:11px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase">Tree</label>
+               <div class="id-field-wrap">
+                 <input class="id-display-input" type="text" id="treeDisplayInput"
+                   placeholder="Village Girl Intro" value="${esc(displayName)}"
+                   oninput="onTreeDisplayInput(this.value)">
+                 <div class="id-preview" id="treeIdPreview">id: <span>${esc(slug)}</span></div>
+               </div>
+               <div class="spacer"></div>
+               <button class="btn" onclick="addNode()">+ Add Node</button>
+               <button class="btn btn-danger" onclick="deleteTree()">Delete Tree</button>
+             </div>
+             <div class="nodes-area" id="nodesArea"></div>
+           `;
+           renderNodes();
+         }
+         
+         function onTreeDisplayInput(val) {
+           const slug = toSlug(val);
+           db.dialogues[activeTreeIdx].id = slug;
+           const preview = document.getElementById('treeIdPreview');
+           if (preview) preview.innerHTML = 'id: <span>' + esc(slug) + '</span>';
+           renderSidebar();
+         }
+         
+         // NODES
+         function renderNodes() {
+           const area = document.getElementById('nodesArea');
+           if (!area) return;
+           const tree = db.dialogues[activeTreeIdx];
+           area.innerHTML = '';
+         
+           (tree.nodes || []).forEach((node, ni) => {
+             area.appendChild(makeDropZone(ni));
+             area.appendChild(buildNodeCard(node, ni));
+           });
+           area.appendChild(makeDropZone((tree.nodes || []).length));
+         }
+         
+         function getExistingNodeIds() {
+           const tree = db.dialogues[activeTreeIdx];
+           return new Set((tree.nodes || []).map(n => n.nodeId));
+         }
+         
+         function buildNodeCard(node, ni) {
+           const isStart = node.nodeId === 'start';
+           const card = document.createElement('div');
+           card.className = 'node-card';
+           card.id = `node-card-${ni}`;
+           card.draggable = true;
+         
+           card.addEventListener('dragstart', e => onDragStart(e, ni));
+           card.addEventListener('dragend',   e => onDragEnd(e));
+         
+           const displayNodeId = fromSlug(node.nodeId);
+           const slugNodeId    = toSlug(displayNodeId);
+           const existingIds   = getExistingNodeIds();
+           const opts = node.options || [];
+           const optRowsHtml = opts.map((o, oi) => {
+             const nextSlug = o.next || '';
+             const missing  = nextSlug && !existingIds.has(nextSlug);
+             return `
+               <div class="option-row">
+                 <input type="text" placeholder="Button label" value="${esc(o.label)}"
+                   oninput="setOption(${ni},${oi},'label',this.value)">
+                 <div class="next-input">
+                   <input type="text" placeholder="→ next nodeId" value="${esc(nextSlug)}"
+                     class="${missing ? 'missing' : ''}"
+                     oninput="onNextInput(this,${ni},${oi})">
+                   <div class="create-node-hint ${missing ? 'visible' : ''}"
+                     onclick="createNodeFromNext(${ni},${oi},'${esc(nextSlug)}')">
+                     ✦ Node "${esc(nextSlug)}" doesn't exist — click to create it
+                   </div>
+                 </div>
+                 <button class="btn-icon" title="Remove option" onclick="removeOption(${ni},${oi})">✕</button>
+               </div>
+             `;
+           }).join('');
+         
+           card.innerHTML = `
+             <div class="node-header">
+               <span class="drag-handle" title="Drag to reorder">⠿</span>
+               <span class="node-badge ${isStart ? 'start-badge' : ''}">${isStart ? '★ START' : 'NODE'}</span>
+               <div class="node-id-wrap">
+                 <input type="text" id="nodeDisplay-${ni}"
+                   placeholder="My Node Name" value="${esc(displayNodeId)}"
+                   oninput="onNodeIdInput(this,${ni})">
+                 <div class="node-id-preview" id="nodeIdPreview-${ni}">nodeId: <span>${esc(slugNodeId)}</span></div>
+               </div>
+               <button class="btn btn-danger" style="padding:4px 10px;font-size:11px;flex-shrink:0" onclick="deleteNode(${ni})">Delete</button>
+             </div>
+         
+             <div class="field-row">
+               <span class="field-label">Speaker</span>
+               <input type="text" placeholder="NPC name" value="${esc(node.speaker)}"
+                 oninput="setNodeField(${ni},'speaker',this.value)">
+             </div>
+         
+             <div class="field-row">
+               <span class="field-label">Text</span>
+               <textarea placeholder="Dialogue text..." oninput="setNodeField(${ni},'text',this.value)">${esc(node.text)}</textarea>
+             </div>
+         
+             <div class="effects-row">
+               <div class="effect-field">
+                 <label>Give Item</label>
+                 <input type="text" placeholder="itemId or blank" value="${esc(node.giveItem)}"
+                   oninput="setNodeField(${ni},'giveItem',this.value)">
+               </div>
+               <div class="effect-field">
+                 <label>Set Flag</label>
+                 <input type="text" placeholder="flagId or blank" value="${esc(node.setFlag)}"
+                   oninput="setNodeField(${ni},'setFlag',this.value)">
+               </div>
+               <div class="effect-field">
+                 <label>Open Shop</label>
+                 <input type="text" placeholder="shopId or blank" value="${esc(node.openShop)}"
+                   oninput="setNodeField(${ni},'openShop',this.value)">
+               </div>
+             </div>
+         
+             <div class="options-section">
+               <div class="options-label">
+                 Player Options
+                 <span style="color:var(--muted);font-size:10px">(null = ends conversation)</span>
+                 <div style="flex:1"></div>
+                 <button class="btn-icon add" title="Add option" onclick="addOption(${ni})">+</button>
+                 <button class="btn-icon" style="color:var(--muted);margin-left:4px" title="Toggle null"
+                   onclick="toggleNullOptions(${ni})">${node.options === null ? 'Set options' : 'Set null'}</button>
+               </div>
+               ${node.options === null
+                 ? '<div class="no-options-tag">options: null — conversation ends here</div>'
+                 : (optRowsHtml || '<div class="no-options-tag">No options yet — click + to add</div>')
+               }
+             </div>
+           `;
+           return card;
+         }
+         
+         // NODE ID INPUT
+         function onNodeIdInput(input, ni) {
+           const slug = toSlug(input.value);
+           db.dialogues[activeTreeIdx].nodes[ni].nodeId = slug;
+           const preview = document.getElementById('nodeIdPreview-' + ni);
+           if (preview) preview.innerHTML = 'nodeId: <span>' + esc(slug) + '</span>';
+           refreshOptionHints();
+         }
+         
+         function refreshOptionHints() {
+           const existingIds = getExistingNodeIds();
+           document.querySelectorAll('.next-input input').forEach(input => {
+             const raw = input.value;
+             const missing = !!(raw && !existingIds.has(raw));
+             input.classList.toggle('missing', missing);
+             const hint = input.parentElement.querySelector('.create-node-hint');
+             if (hint) {
+               hint.classList.toggle('visible', missing);
+               if (missing) hint.textContent = `\u2726 Node "${raw}" doesn't exist \u2014 click to create it`;
+             }
+           });
+         }
+         
+         // OPTION NEXT INPUT
+         function onNextInput(input, ni, oi) {
+           const raw = input.value;
+           db.dialogues[activeTreeIdx].nodes[ni].options[oi].next = raw;
+         
+           const existingIds = getExistingNodeIds();
+           const missing = raw && !existingIds.has(raw);
+           input.classList.toggle('missing', missing);
+           const hint = input.parentElement.querySelector('.create-node-hint');
+           if (hint) {
+             hint.classList.toggle('visible', missing);
+             hint.textContent = missing ? `✦ Node "${raw}" doesn't exist — click to create it` : '';
+             hint.onclick = missing ? () => createNodeFromNext(ni, oi, raw) : null;
+           }
+         }
+         
+         function createNodeFromNext(ni, oi, nextId) {
+           const tree = db.dialogues[activeTreeIdx];
+           if (tree.nodes.find(n => n.nodeId === nextId)) {
+             showToast('Node already exists');
+             return;
+           }
+           tree.nodes.push({
+             nodeId:  nextId,
+             speaker: tree.nodes[ni]?.speaker || '',
+             text:    '',
+             options: []
+           });
+           renderNodes();
+           setTimeout(() => {
+             const area = document.getElementById('nodesArea');
+             if (area) area.scrollTop = area.scrollHeight;
+           }, 50);
+           showToast('Created node "' + nextId + '"');
+         }
+         
+         // DRAG AND DROP
+         function makeDropZone(insertBeforeIdx) {
+           const dz = document.createElement('div');
+           dz.className = 'drop-zone';
+           dz.dataset.insertBefore = insertBeforeIdx;
+         
+           dz.addEventListener('dragover', e => {
+             e.preventDefault();
+             dz.classList.add('active');
+           });
+           dz.addEventListener('dragleave', () => dz.classList.remove('active'));
+           dz.addEventListener('drop', e => {
+             e.preventDefault();
+             dz.classList.remove('active');
+             const targetIdx = parseInt(dz.dataset.insertBefore);
+             if (dragSrcIdx === null || dragSrcIdx === targetIdx) return;
+             reorderNode(dragSrcIdx, targetIdx);
+           });
+           return dz;
+         }
+         
+         function onDragStart(e, ni) {
+           dragSrcIdx = ni;
+           setTimeout(() => {
+             const card = document.getElementById('node-card-' + ni);
+             if (card) card.classList.add('dragging');
+           }, 0);
+           e.dataTransfer.effectAllowed = 'move';
+           e.dataTransfer.setData('text/plain', ni);
+         }
+         
+         function onDragEnd(e) {
+           document.querySelectorAll('.node-card').forEach(c => c.classList.remove('dragging'));
+           dragSrcIdx = null;
+         }
+         
+         function reorderNode(fromIdx, insertBeforeIdx) {
+           const nodes = db.dialogues[activeTreeIdx].nodes;
+           const [moved] = nodes.splice(fromIdx, 1);
+           const adjustedTarget = insertBeforeIdx > fromIdx ? insertBeforeIdx - 1 : insertBeforeIdx;
+           nodes.splice(adjustedTarget, 0, moved);
+           renderNodes();
+         }
+         
+         // MUTATIONS
+         function setNodeField(ni, field, val) {
+           db.dialogues[activeTreeIdx].nodes[ni][field] = val;
+         }
+         
+         function setOption(ni, oi, field, val) {
+           db.dialogues[activeTreeIdx].nodes[ni].options[oi][field] = val;
+         }
+         
+         function addOption(ni) {
+           const node = db.dialogues[activeTreeIdx].nodes[ni];
+           if (!Array.isArray(node.options)) node.options = [];
+           if (node.options.length >= 4) { showToast('Max 4 options per node'); return; }
+           node.options.push({ label: '', next: '' });
+           renderNodes();
+         }
+         
+         function removeOption(ni, oi) {
+           db.dialogues[activeTreeIdx].nodes[ni].options.splice(oi, 1);
+           renderNodes();
+         }
+         
+         function toggleNullOptions(ni) {
+           const node = db.dialogues[activeTreeIdx].nodes[ni];
+           node.options = node.options === null ? [] : null;
+           renderNodes();
+         }
+         
+         function addNode() {
+           const tree = db.dialogues[activeTreeIdx];
+           tree.nodes.push({ nodeId: 'new_node', speaker: '', text: '', options: [] });
+           renderNodes();
+           setTimeout(() => {
+             const area = document.getElementById('nodesArea');
+             if (area) area.scrollTop = area.scrollHeight;
+           }, 50);
+         }
+         
+         function deleteNode(ni) {
+           if (!confirm('Delete this node?')) return;
+           db.dialogues[activeTreeIdx].nodes.splice(ni, 1);
+           renderNodes();
+         }
+         
+         function addTree() {
+           db.dialogues.push({ id: 'new_dialogue', nodes: [{ nodeId: 'start', speaker: '', text: '', options: [] }] });
+           selectTree(db.dialogues.length - 1);
+         }
+         
+         function deleteTree() {
+           if (!confirm('Delete this entire dialogue tree?')) return;
+           db.dialogues.splice(activeTreeIdx, 1);
+           activeTreeIdx = -1;
+           renderSidebar();
+           const main = document.getElementById('editorMain');
+           main.innerHTML = '';
+           main.appendChild(buildEmptyState());
+         }
+         
+         function buildEmptyState() {
+           const d = document.createElement('div');
+           d.className = 'empty-state';
+           d.id = 'emptyState';
+           d.innerHTML = `
+             <div class="big">No tree selected</div>
+             <div>Import a dialogues.json or create a new tree</div>
+             <button class="btn btn-accent" onclick="addTree()">+ Create Tree</button>
+           `;
+           return d;
+         }
+         
+         // IMPORT / EXPORT
+         function importJSON() { document.getElementById('fileInput').click(); }
+         
+         function loadFile(e) {
+           const file = e.target.files[0];
+           if (!file) return;
+           const reader = new FileReader();
+           reader.onload = ev => {
+             try {
+               db = JSON.parse(ev.target.result);
+               if (!db.dialogues) db.dialogues = [];
+               activeTreeIdx = -1;
+               renderSidebar();
+               const main = document.getElementById('editorMain');
+               main.innerHTML = '';
+               main.appendChild(buildEmptyState());
+               showToast('Imported ' + db.dialogues.length + ' tree(s)');
+             } catch(err) { alert('Invalid JSON: ' + err.message); }
+           };
+           reader.readAsText(file);
+           e.target.value = '';
+         }
+         
+         function buildJSON() {
+           const clean = JSON.parse(JSON.stringify(db));
+           clean.dialogues.forEach(tree => {
+             (tree.nodes || []).forEach(node => {
+               ['giveItem','setFlag','openShop'].forEach(f => { if (!node[f]) delete node[f]; });
+               if (Array.isArray(node.options) && node.options.length === 0) node.options = null;
+             });
+           });
+           return JSON.stringify(clean, null, 2);
+         }
+         
+         function exportJSON() {
+           const blob = new Blob([buildJSON()], { type: 'application/json' });
+           const a = document.createElement('a');
+           a.href = URL.createObjectURL(blob);
+           a.download = 'dialogues.json';
+           a.click();
+           showToast('Downloaded dialogues.json');
+         }
+         
+         function showPreview() {
+           document.getElementById('jsonPreview').textContent = buildJSON();
+           document.getElementById('modalOverlay').classList.add('open');
+         }
+         function closePreview() { document.getElementById('modalOverlay').classList.remove('open'); }
+         function closeModal(e) { if (e.target === document.getElementById('modalOverlay')) closePreview(); }
+         function copyJSON() { navigator.clipboard.writeText(buildJSON()).then(() => showToast('Copied to clipboard')); }
+         
+         // FILE DRAG & DROP
+         (function () {
+           let dragCounter = 0;
+           const overlay = document.getElementById('dropOverlay');
+         
+           document.addEventListener('dragenter', e => {
+             if (!e.dataTransfer.types.includes('Files')) return;
+             dragCounter++;
+             overlay.classList.add('active');
+           });
+         
+           document.addEventListener('dragleave', e => {
+             if (!e.dataTransfer.types.includes('Files')) return;
+             dragCounter--;
+             if (dragCounter <= 0) { dragCounter = 0; overlay.classList.remove('active'); }
+           });
+         
+           document.addEventListener('dragover', e => {
+             if (e.dataTransfer.types.includes('Files')) e.preventDefault();
+           });
+         
+           document.addEventListener('drop', e => {
+             e.preventDefault();
+             dragCounter = 0;
+             overlay.classList.remove('active');
+         
+             const file = e.dataTransfer.files[0];
+             if (!file) return;
+             if (!file.name.endsWith('.json')) {
+               showToast('Only .json files are supported', 'warn');
+               return;
+             }
+         
+             const reader = new FileReader();
+             reader.onload = ev => {
+               try {
+                 db = JSON.parse(ev.target.result);
+                 if (!db.dialogues) db.dialogues = [];
+                 activeTreeIdx = -1;
+                 renderSidebar();
+                 const main = document.getElementById('editorMain');
+                 main.innerHTML = '';
+                 main.appendChild(buildEmptyState());
+                 showToast('Imported ' + db.dialogues.length + ' tree(s) from ' + file.name);
+               } catch (err) { showToast('Invalid JSON: ' + err.message, 'warn'); }
+             };
+             reader.readAsText(file);
+           });
+         })();
+         
+         
+         function esc(s) {
+           if (!s) return '';
+           return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+         }
+         function showToast(msg, type) {
+           const t = document.getElementById('toast');
+           t.textContent = msg;
+           t.style.borderColor = type === 'warn' ? 'var(--warn)' : 'var(--success)';
+           t.style.color = type === 'warn' ? 'var(--warn)' : 'var(--success)';
+           t.classList.add('show');
+           setTimeout(() => t.classList.remove('show'), 2600);
+         }
+      </script>
+   </body>
 </html>
